@@ -43,16 +43,17 @@ public class MyRandom extends Random
         }
 
         Xi = Math.floorMod((A * Xi) + B, M);
-        long temp = (Xi >>> 16) & OUTMASK; // Get bits 47..16 https://en.wikipedia.org/wiki/Linear_congruential_generator
-        return (int) (temp >>> (32 - bits));
+        //long temp = (Xi >>> 16) & OUTMASK; // Get bits 47..16 https://en.wikipedia.org/wiki/Linear_congruential_generator
+        //return (int) (temp >>> (32 - bits));
+        return (int) (Xi >>> (32 - bits));
     }
 
     @Override
     public void setSeed(long seed)
     {
-        if (seed >= M) {
-            throw new IllegalArgumentException("Seed to large");
-        }
+        //if (seed > M) {
+        //    throw new IllegalArgumentException("Seed to large");
+        //}
         this.Xi = seed;
     }
 }
