@@ -2,18 +2,10 @@ import java.util.Random;
 
 public class MyRandom extends Random
 {
-    // Numbers taken from https://en.wikipedia.org/wiki/Linear_congruential_generator
     private final byte[] S = new byte[256];
 
     private int a = 0;
     private int b = 0;
-
-    private void reset(final byte[] key)
-    {
-        a = 0;
-        b = 0;
-        scheduleKeys(key);
-    }
 
     private void scheduleKeys(final byte[] key)
     {
@@ -30,12 +22,12 @@ public class MyRandom extends Random
     public MyRandom()
     {
         byte[] key = new byte[]{1, 2, 3, 4, 5};
-        reset(key);
+        setSeed(key);
     }
 
     public MyRandom(byte[] key)
     {
-        reset(key);
+        setSeed(key);
     }
 
     @Override
@@ -46,14 +38,14 @@ public class MyRandom extends Random
 
         swapValues(a, b);
 
-        System.out.println((Math.pow(2, bits) - 1));
-
-        return S[Math.floorMod(S[a] + S[b], 256)] & (int) (Math.pow(2, bits) - 1);
+        return S[Math.floorMod(S[a] + S[b], 256)] & ((1 << bits) - 1);
     }
 
     public void setSeed(byte[] key)
     {
-        reset(key);
+		a = 0;
+		b = 0;
+        scheduleKeys(key);
     }
 
     private void swapValues(int i, int j)

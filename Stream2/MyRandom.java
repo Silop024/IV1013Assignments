@@ -20,14 +20,14 @@ public class MyRandom extends Random
 
     // Numbers taken from https://en.wikipedia.org/wiki/Linear_congruential_generator
     private static final long A = 0x5DEECE66DL;
-    private static final long M = 0x1000000000000L;
+    private static final long M = (1L << 48);
     private static final int B = 11;
 
-    private static final long outputMask = 0x0ffffffffL;
+    private static final long OUTMASK = (1L << 8) - 1;
 
     public MyRandom()
     {
-        setSeed(this.nextLong());
+        setSeed(12345);
     }
 
     public MyRandom(long seed)
@@ -38,12 +38,12 @@ public class MyRandom extends Random
     @Override
     public int next(int bits)
     {
-        if (bits == 0) {
-            throw new IllegalArgumentException("Can not request 0 bits");
+        if (bits < 1 || bits > 32) {
+            throw new IllegalArgumentException("Can only request 1-32 bits (inclusive)");
         }
 
-        Xi = ((A * Xi) + B) % M;
-        long temp = (Xi >>> 16) & outputMask; // Get bits 47..16 https://en.wikipedia.org/wiki/Linear_congruential_generator
+        Xi = Math.floorMod((A * Xi) + B, M);
+        long temp = (Xi >>> 16) & OUTMASK; // Get bits 47..16 https://en.wikipedia.org/wiki/Linear_congruential_generator
         return (int) (temp >>> (32 - bits));
     }
 

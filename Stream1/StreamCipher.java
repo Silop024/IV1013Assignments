@@ -12,7 +12,9 @@ public class StreamCipher
     public static void main(String[] args) throws IOException
     {
         if (args.length != 3) {
-            throw new IllegalArgumentException("Usage: java StreamCipher <key> <infile> <outfile>");
+			System.out.println("Invalid input");
+            System.out.println("Usage: java StreamCipher <key> <infile> <outfile>");
+			exit(1);
         }
 
         FileInputStream plaintext = new FileInputStream(args[1]);
