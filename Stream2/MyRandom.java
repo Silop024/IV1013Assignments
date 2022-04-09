@@ -20,14 +20,14 @@ public class MyRandom extends Random
 
     // Numbers taken from https://en.wikipedia.org/wiki/Linear_congruential_generator
     private static final long A = 0x5DEECE66DL;
-    private static final long M = (1L << 48);
+    private static final long M = 0x1000000000000L;
     private static final int B = 11;
 
-    private static final long OUTMASK = (1L << 8) - 1;
+    private static final long outputMask = 0x0ffffffffL;
 
     public MyRandom()
     {
-        setSeed(12345);
+        this(0L);
     }
 
     public MyRandom(long seed)
@@ -38,22 +38,18 @@ public class MyRandom extends Random
     @Override
     public int next(int bits)
     {
-        if (bits < 1 || bits > 32) {
-            throw new IllegalArgumentException("Can only request 1-32 bits (inclusive)");
+        if (bits <= 0 || bits > 32) {
+            StreamCipher.exitWithError("Can only request bits in the range [1-32]");
         }
 
-        Xi = Math.floorMod((A * Xi) + B, M);
-        //long temp = (Xi >>> 16) & OUTMASK; // Get bits 47..16 https://en.wikipedia.org/wiki/Linear_congruential_generator
-        //return (int) (temp >>> (32 - bits));
-        return (int) (Xi >>> (32 - bits));
+        Xi = ((A * Xi) + B) % M;
+        long temp = (Xi >>> 16) & outputMask; // Get bits 47..16 https://en.wikipedia.org/wiki/Linear_congruential_generator
+        return (int) (temp >>> (32 - bits));
     }
 
     @Override
-    public void setSeed(long seed)
+    public void setSeed(long newSeed)
     {
-        //if (seed > M) {
-        //    throw new IllegalArgumentException("Seed to large");
-        //}
-        this.Xi = seed;
+        this.Xi = newSeed;
     }
 }

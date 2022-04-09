@@ -7,6 +7,13 @@ public class MyRandom extends Random
     private int a = 0;
     private int b = 0;
 
+    private void reset(final byte[] key)
+    {
+        a = 0;
+        b = 0;
+        scheduleKeys(key);
+    }
+
     private void scheduleKeys(final byte[] key)
     {
         for (int i = 0; i < 256; i++) {
@@ -22,12 +29,13 @@ public class MyRandom extends Random
     public MyRandom()
     {
         byte[] key = new byte[]{1, 2, 3, 4, 5};
-        setSeed(key);
+        reset(key);
     }
 
-    public MyRandom(byte[] key)
+    public MyRandom(final byte[] key)
     {
-        setSeed(key);
+        reset(key);
+
     }
 
     @Override
@@ -43,15 +51,17 @@ public class MyRandom extends Random
 
     public void setSeed(byte[] key)
     {
-		a = 0;
-		b = 0;
-        scheduleKeys(key);
+        reset(key);
     }
 
     private void swapValues(int i, int j)
     {
-        byte temp = S[i];
+        /*byte temp = S[i];
         S[i] = S[j];
-        S[j] = temp;
+        S[j] = temp;*/
+
+        S[i] = (byte) (S[i] ^ S[j]);
+        S[j] = (byte) (S[i] ^ S[j]);
+        S[i] = (byte) (S[i] ^ S[j]);
     }
 }
