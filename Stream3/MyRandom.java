@@ -7,6 +7,9 @@ public class MyRandom extends Random
     private int a = 0;
     private int b = 0;
 
+    private static final int Ox100 = 256;
+    private static final int OxFF = Ox100 - 1;
+
     private void reset(final byte[] key)
     {
         a = 0;
@@ -16,12 +19,12 @@ public class MyRandom extends Random
 
     private void scheduleKeys(final byte[] key)
     {
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < Ox100; i++) {
             S[i] = (byte) i;
         }
         int j = 0;
-        for (int i = 0; i < 256; i++) {
-            j = Math.floorMod(j + S[i] + key[i % key.length], 256); // If key length < message => wraps around and uses key again
+        for (int i = 0; i < Ox100; i++) {
+            j = ((j + S[i] + key[i % key.length]) & OxFF); // If key length < message => wraps around and uses key again
             swapValues(i, j);
         }
     }
@@ -41,25 +44,21 @@ public class MyRandom extends Random
     @Override
     public int next(int bits)
     {
-        a = Math.floorMod((a + 1), 256);
-        b = Math.floorMod((b + S[a]), 256);
+        a = ((a + 1) & OxFF);
+        b = ((b + S[a]) & OxFF);
 
         swapValues(a, b);
 
-        return S[Math.floorMod(S[a] + S[b], 256)] & ((1 << bits) - 1);
+        return S[((S[a] + S[b]) & OxFF)] & ((1 << bits) - 1);
     }
 
-    public void setSeed(byte[] key)
+    public void setSeed(final byte[] key)
     {
         reset(key);
     }
 
     private void swapValues(int i, int j)
     {
-        /*byte temp = S[i];
-        S[i] = S[j];
-        S[j] = temp;*/
-
         S[i] = (byte) (S[i] ^ S[j]);
         S[j] = (byte) (S[i] ^ S[j]);
         S[i] = (byte) (S[i] ^ S[j]);
