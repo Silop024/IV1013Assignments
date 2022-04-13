@@ -4,8 +4,8 @@ public class MyRandom extends Random
 {
     private final byte[] S = new byte[256];
 
-    private int a = 0;
-    private int b = 0;
+    private static int a = 0;
+    private static int b = 0;
 
     private static final int Ox100 = 256;
     private static final int OxFF = Ox100 - 1;
@@ -38,24 +38,21 @@ public class MyRandom extends Random
     public MyRandom(final byte[] key)
     {
         reset(key);
-
     }
 
     @Override
     public int next(int bits)
     {
-        a = ((a + 1) & OxFF);
-        b = ((b + S[a]) & OxFF);
+        a = (a + 1) & OxFF;
+        b = (b + S[a]) & OxFF;
 
         swapValues(a, b);
 
-        return S[((S[a] + S[b]) & OxFF)] & ((1 << bits) - 1);
+        return S[(S[a] + S[b]) & OxFF] & ((1 << bits) - 1);
     }
 
-    public void setSeed(final byte[] key)
-    {
-        reset(key);
-    }
+    @Override
+    public void setSeed(long seed) {}
 
     private void swapValues(int i, int j)
     {

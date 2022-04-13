@@ -8,8 +8,6 @@ import static java.lang.System.exit;
 
 public class StreamCipher
 {
-    private static final MyRandom rand = new MyRandom();
-
     public static void main(String[] args)
     {
         if (args.length != 3) {
@@ -17,22 +15,44 @@ public class StreamCipher
         }
 
         try {
-            FileInputStream plaintext = new FileInputStream(args[1]);
-            FileOutputStream ciphertext = new FileOutputStream(args[2]);
+            FileInputStream infile = new FileInputStream(args[1]);
+            FileOutputStream outfile = new FileOutputStream(args[2]);
 
-            rand.setSeed(args[0].getBytes(StandardCharsets.UTF_8));
+            // Key debug
+            byte[] key = args[0].getBytes(StandardCharsets.UTF_8);
+            System.out.println("-----Key data-----");
+            debugOutputCharacters(key);
+            debugOutputHex(key);
 
-            for (int data = plaintext.read(); data != -1; data = plaintext.read()) {
-                ciphertext.write(data ^ rand.next(8));
+            final MyRandom rand = new MyRandom(key);
+
+            System.out.println("-----Stream data-----");
+            for (int data = infile.read(); data != -1; data = infile.read()) {
+                int stream = rand.next(8);
+                int cipher = (data ^ stream);
+                outfile.write(cipher);
+
+                System.out.printf("[K=%02x,C=%02x]", stream, cipher);
             }
-            plaintext.close();
-            ciphertext.close();
+            System.out.println();
+
+            infile.close();
+            outfile.close();
+
+	        // Terminal output of the contents of the outfile.
+            System.out.println("-----Outfile data-----");
+            FileInputStream outputReader = new FileInputStream(args[2]);
+            byte[] outputBytes = outputReader.readAllBytes();
+            outputReader.close();
+            debugOutputHex(outputBytes);
+            debugOutputCharacters(outputBytes);
 
         } catch (FileNotFoundException e) {
             exitWithError("Error: Invalid file given. Try again and make sure in/outfile are valid");
         } catch (IOException e) {
             exitWithError("Error: IO operation failed due to system error. Try again and make sure in/outfile are valid");
         }
+        System.out.println("-----Exit without error-----");
         exit(0);
     }
 
@@ -40,5 +60,22 @@ public class StreamCipher
     {
         System.out.println(errorMessage);
         exit(1);
+    }
+
+    private static void debugOutputCharacters(byte[] output)
+    {
+        System.out.println("Characters:");
+        System.out.println(new String(output));
+    }
+
+    private static void debugOutputHex(byte[] output)
+    {
+        System.out.println("Hexadecimal values:");
+
+        for(byte b : output)
+        {
+            System.out.printf("%02x ", b);
+        }
+        System.out.println();
     }
 }

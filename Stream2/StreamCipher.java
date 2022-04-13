@@ -27,6 +27,11 @@ public class StreamCipher
             infile.close();
             outfile.close();
 
+	    // Terminal output of the contents of the outfile.
+            byte[] outputBytes = new FileInputStream(args[2]).readAllBytes();
+            debugOutputCharacters(outputBytes);
+            debugOutputValues(outputBytes);
+
         } catch (FileNotFoundException e) {
             exitWithError("Error: Invalid file given. Try again and make sure in/outfile are valid");
         } catch (NumberFormatException e) {
@@ -41,5 +46,18 @@ public class StreamCipher
     {
         System.out.println(errorMessage);
         exit(1);
+    }
+
+    private static void debugOutputCharacters(byte[] output)
+    {
+        System.out.println(new String(output));
+    }
+
+    private static void debugOutputValues(byte[] output)
+    {
+        for(byte b : output)
+        {
+            System.out.printf("%02x ", b);
+        }
     }
 }
