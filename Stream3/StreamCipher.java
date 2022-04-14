@@ -21,9 +21,8 @@ public class StreamCipher
             byte[] key = new BigInteger(args[0]).toByteArray();
 
             // Key debug
-            /*System.out.println("-----Key data-----");
+            System.out.println("-----Key data-----");
             System.out.println(args[0]);
-            debugOutputHex(key);*/
 
             final MyRandom rand = new MyRandom(key);
 
