@@ -38,6 +38,21 @@ public class CollisionTester
         return null;
     }
 
+    public boolean testForCollision(String m1, String m2) {
+        MyMessageDigest md = new MyMessageDigest("SHA-256");
+        byte[] h1 = md.generateDigest(m1, endianness);
+        byte[] h2 = md.generateDigest(m2, endianness);
+
+        if(verbose) {
+            System.out.printf("h1 = %s, h2 = %s%n",
+                    MyMessageDigest.digestToString(h1),
+                    MyMessageDigest.digestToString(h2)
+            );
+        }
+
+        return Arrays.equals(h1, h2);
+    }
+
     public Collision[] testForCollision(String message, int nrOfTests)
     {
         ArrayList<Collision> tests = new ArrayList<>();
