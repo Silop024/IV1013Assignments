@@ -2,61 +2,37 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/*
+MyMessageDigest handles the conversion from 256 to 24 bit digests.
+ */
 public class MyMessageDigest
 {
-    private final MessageDigest messageDigest;
+    private final MessageDigest md;
 
-    public MyMessageDigest(String algorithm)
+    public MyMessageDigest()
     {
         try {
-            messageDigest = MessageDigest.getInstance(algorithm);
+            md = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to create message digest, no such algorithm");
+            throw new RuntimeException(e.getMessage());
         }
     }
 
-    public byte[] getBigEndianDigest(String message, int length)
+    public byte[] digest(byte[] input)
     {
-        return getTruncatedDigest(getDigest(message), 0, length);
+        byte[] output = new byte[3];
+        System.arraycopy(md.digest(input), 0, output, 0, 3);
+
+        return output;
     }
 
-    public byte[] getLittleEndianDigest(String message, int length)
+    public byte[] digest(String input)
     {
-        byte[] digest = getDigest(message);
-
-        return getTruncatedDigest(digest, digest.length - length, length);
+        return digest(input.getBytes(StandardCharsets.UTF_8));
     }
 
-    private byte[] getDigest(String message)
-    {
-        messageDigest.update(message.getBytes(StandardCharsets.UTF_8));
 
-        return messageDigest.digest();
-    }
-
-    private byte[] getTruncatedDigest(byte[] digest, int srcPos, int length)
-    {
-        byte[] truncatedDigest = new byte[length];
-
-        System.arraycopy(digest, srcPos, truncatedDigest, 0, length);
-
-        return truncatedDigest;
-    }
-
-    public byte[] generateDigest(String message, Endianness endianness)
-    {
-        switch (endianness) {
-            case Big:
-                return getBigEndianDigest(message, 3);
-            case Little:
-                return getLittleEndianDigest(message, 3);
-            default:
-                return null;
-        }
-    }
-
-    public static String digestToString(byte[] digest)
+    public static String toString(byte[] digest)
     {
         StringBuilder sb = new StringBuilder();
         for (byte b : digest) sb.append(String.format("%02x", b & 0xff));
