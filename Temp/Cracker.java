@@ -1,39 +1,45 @@
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Cracker implements Runnable
 {
-    protected final List<String> wordList;
-    //protected static final List<String[]> userList = Collections.synchronizedList(new ArrayList<>(20));
-    public final List<String[]> userList = new ArrayList<>(20);
-    //public static final CopyOnWriteArrayList<String[]> userList = new CopyOnWriteArrayList<>();
+    private final List<String> wordList;
+    private final List<String[]> userList;
 
-    public Cracker(List<String> wordList)
+    public Cracker(List<String> wordList, List<String[]> userList)
     {
-        this.wordList = List.copyOf(wordList);
+        this.wordList = wordList;
+        this.userList = userList;
     }
 
     @Override
-    public final void run()
+    public void run()
     {
         crack();
     }
 
-    protected void crack()
+    private void crack()
     {
-        wordList.forEach(this::checkAllVictims);
-
+        System.out.println("Trying 1 mangle");
         wordList.forEach(
-                x -> {
-                    String[] mangles = Mangle.getAllMangles(x);
-                    if (mangles != null)
-                        Arrays.asList(mangles).forEach(this::checkAllVictims);
-                }
+                x -> Mangle.getAllMangles(x).forEach(this::checkAllVictims)
+        );
+        System.out.println("Trying 2 mangles");
+        wordList.forEach(
+                x -> Mangle.getAllMangles(x).forEach(
+                        y -> Mangle.getAllMangles(y).forEach(this::checkAllVictims)
+                )
+        );
+        System.out.println("Trying 3 mangles");
+        wordList.forEach(
+                x -> Mangle.getAllMangles(x).forEach(
+                        y -> Mangle.getAllMangles(y).forEach(
+                                z -> Mangle.getAllMangles(z).forEach(this::checkAllVictims)
+                        )
+                )
         );
     }
 
-    private void checkAllVictims(String word)
+    public void checkAllVictims(String word)
     {
         userList.removeIf(x -> hashCompare(word, x[1]));
     }
@@ -41,7 +47,12 @@ public class Cracker implements Runnable
     private boolean hashCompare(String word, String hash)
     {
         if (hash.equals(jcrypt.crypt(hash.substring(0, 2), word))) {
-            System.out.println(word);
+            synchronized (PasswordCrack.foundHashes) {
+                if (!PasswordCrack.foundHashes.contains(hash)) {
+                    System.out.println(word);
+                    PasswordCrack.foundHashes.add(hash);
+                }
+            }
             return true;
         }
         return false;

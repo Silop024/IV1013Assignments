@@ -1,25 +1,22 @@
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 public class Mangle
 {
     private static final char[] alphabet = "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final Locale locale = Locale.ROOT;
 
-    public static String[] getAllMangles(String origin)
+    public static List<String> getAllMangles(String origin)
     {
-        if (origin.length() < 2) {
-            return null;
+        int length = origin.length();
+        if (length < 2) {
+            return new ArrayList<>();
         }
 
-        final Set<String> mangles = new HashSet<>(16);
+        Set<String> mangles = new HashSet<>(64);
 
         mangles.add(toggle(origin));
         mangles.add(capitalize(origin, true));
         mangles.add(capitalize(origin, false));
-        mangles.add(trim(origin, true));
-        mangles.add(trim(origin, false));
         mangles.add(duplicate(origin));
         mangles.add(uppercase(origin, true));
         mangles.add(uppercase(origin, false));
@@ -27,23 +24,28 @@ public class Mangle
         mangles.add(rollercoaster(origin, false));
 
         String reverse = reverse(origin);
-        if(!reverse.equals(origin))
-        {
+        if (!reverse.equals(origin)) {
             mangles.add(reverse);
+            if (length < 12) {
+                mangles.add(reflect(origin, false));
+            }
             mangles.add(reflect(origin, true));
-            mangles.add(reflect(origin, false));
         }
 
         for (char c : alphabet) {
-            if(origin.length() < 8) {
+            if (length < 8) {
                 mangles.add(append(origin, c));
             }
             mangles.add(prepend(origin, c));
         }
+        if (length < 12) {
+            mangles.add(trim(origin, false));
+        }
+        mangles.add(trim(origin, true));
 
         mangles.remove(origin);
 
-        return mangles.toArray(String[]::new);
+        return new ArrayList<>(mangles);
     }
 
     public static String toggle(String origin)

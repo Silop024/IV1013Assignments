@@ -1,6 +1,8 @@
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -10,6 +12,9 @@ import java.util.stream.Stream;
 
 public class PasswordCrack
 {
+    public final static List<String> foundHashes = Collections.synchronizedList(new ArrayList<>(20));
+
+
     public static void main(String[] args)
     {
         if (args.length != 2) {
@@ -24,6 +29,7 @@ public class PasswordCrack
                     .collect(Collectors.toList());
             passwdFileData.close();
 
+
             if (userList.isEmpty()) {
                 exitWithError("Password list empty, no passwords to crack.", "Exiting...");
             }
@@ -33,6 +39,11 @@ public class PasswordCrack
             Stream<String> dictFileData = Files.lines(Paths.get(args[0]));
             List<String> dict = dictFileData.collect(Collectors.toList());
             dictFileData.close();
+
+            userList.forEach(x -> {
+                dict.add(0, x[0]);
+                dict.addAll(0, List.of(x[2].split(" ")));
+            });
 
             startAttack(dict, userList);
 
@@ -45,6 +56,10 @@ public class PasswordCrack
 
     private static void startAttack(List<String> dict, List<String[]> users) throws InterruptedException
     {
+        Cracker cracker = new Cracker(dict, users);
+        dict.forEach(cracker::checkAllVictims);
+        users = users.stream().filter(x -> !foundHashes.contains(x[1])).collect(Collectors.toList());
+
         int threads = Runtime.getRuntime().availableProcessors();
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         int size = dict.size();
@@ -53,12 +68,12 @@ public class PasswordCrack
             int max = Math.min(size, (i + 1) * subSize);
             int min = i * subSize;
 
-            Cracker c = new Cracker(dict.subList(min, max));
-            c.userList.addAll(users);
-            pool.submit(c);
+            pool.submit(new Cracker(dict.subList(min, max), users));
         }
         pool.shutdown();
-        pool.awaitTermination(3, TimeUnit.MINUTES);
+        if (!pool.awaitTermination(1, TimeUnit.DAYS)) {
+            System.out.println("Exited before thread termination");
+        }
     }
 
     private static void exitWithError(String errorMsg)
