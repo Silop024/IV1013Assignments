@@ -1,72 +1,70 @@
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 public class Mangle
 {
     private static final char[] alphabet = "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final Locale locale = Locale.ROOT;
 
+    /*public static final Set<String> triedMangles = Collections.synchronizedSet(new HashSet<>(1000000));
 
-    public static String[] getAllMangles(String origin)
+    public static List<String> getFinalMangles(String origin)
     {
         int length = origin.length();
-        if (length == 0) {
-            return null;
+        if (length < 2) {
+            return new ArrayList<>();
         }
-        Set<String> mangles = new HashSet<>();
+        Set<String> mangles = new HashSet<>(getAllMangles(origin));
 
-        String reverse = reverse(origin);
+        synchronized (triedMangles) {
+            mangles.removeIf(triedMangles::contains);
 
-        if (length != 1) {
-            // Upper/lower-case the string
-            String upper = uppercase(origin, true);
-            if (!upper.equals(origin)) {
-                mangles.add(upper);
-            }
-            String lower = uppercase(origin, false);
-            if (!lower.equals(origin)) {
-                mangles.add(lower);
-            }
-            mangles.add(trim(origin, true));
-
-            // Reverse the string
-            if (!reverse.equals(origin)) {
-                mangles.add(reverse);
-            }
-            mangles.add(rollercoaster(origin, true));
-            mangles.add(rollercoaster(origin, false));
+            triedMangles.addAll(mangles);
         }
+        return new ArrayList<>(mangles);
+    }*/
 
-        if (length < 8) {
-            // Append to the string
-            for (char c : alphabet) {
-                mangles.add(append(origin, c));
-            }
-            // Duplicate the string
-            mangles.add(duplicate(origin));
-
-            // Reflect the string
-            if (!reverse.equals(origin)) {
-                mangles.add(reflect(origin, true));
-                mangles.add(reflect(origin, false));
-            }
-            mangles.add(trim(origin, false));
+    public static List<String> getAllMangles(String origin)
+    {
+        int length = origin.length();
+        if (length < 2) {
+            return new ArrayList<>();
         }
-        // Prepend to the string
-        for (char c : alphabet) {
-            mangles.add(prepend(origin, c));
-        }
-
-        boolean isCapitalized = Character.isUpperCase(origin.charAt(0));
-        mangles.add(capitalize(origin, !isCapitalized));
+        Set<String> mangles = new HashSet<>(64);
 
         mangles.add(toggle(origin));
+        mangles.add(capitalize(origin, true));
+        mangles.add(capitalize(origin, false));
+        mangles.add(uppercase(origin, true));
+        mangles.add(uppercase(origin, false));
+        mangles.add(rollercoaster(origin, true));
+        mangles.add(rollercoaster(origin, false));
 
-        return mangles.toArray(String[]::new);
+        for (char c : alphabet) {
+            if (length < 8) {
+                mangles.add(append(origin, c));
+            }
+            mangles.add(prepend(origin, c));
+        }
+        if (length < 12) {
+            mangles.add(trim(origin, false));
+        }
+        mangles.add(trim(origin, true));
+
+        mangles.add(duplicate(origin));
+
+        String reverse = reverse(origin);
+        if (!reverse.equals(origin)) {
+            mangles.add(reverse);
+            if (length < 12) {
+                mangles.add(reflect(origin, false));
+            }
+            mangles.add(reflect(origin, true));
+        }
+        mangles.remove(origin);
+
+        return new ArrayList<>(mangles);
     }
 
-    // Toggle case of the string
     public static String toggle(String origin)
     {
         char[] chars = origin.toCharArray();
