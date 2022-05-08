@@ -1,55 +1,105 @@
 import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import java.io.IOException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.nio.file.StandardOpenOption;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Hiddec
 {
-    static InputHandler input;
+    public static Cipher cipher;
 
-    public static void main(String[] args) throws IllegalBlockSizeException, BadPaddingException
+    public static void main(String[] args) throws Exception
     {
-        input = new InputHandler(args);
+        Pattern pattern = Pattern.compile("--(\\w+)=");
+        Consumer<String> argCheck = arg -> {
+            if (!pattern.matcher(arg).find()) exitWithError("Incorrect input " + arg);
+        };
 
-        List<byte[]> blocks = new ArrayList<>();
+        Map<String, String> map = Arrays.stream(args)
+                .peek(argCheck)
+                .map(arg -> arg.split("="))
+                .collect(Collectors.toMap(x -> x[0], x -> x[1]));
 
-        byte[] inData = input.getInData();
-        int dataLength = inData.length;
+        final byte[] data = DataParser.parseBytesFromFile(map.get("--input"));
+        final SecretKeySpec key = createSecretKey(map.get("--key"));
+        final Cipher cipher = createCipher(map.get("--ctr"), key);
 
-        for (int i = 0; i < dataLength / 128 - 128; i++) {
-            blocks.add(Arrays.copyOfRange(inData, i * 128, (i + 1) * 128));
+        final MessageDigest md5 = MessageDigest.getInstance("MD5");
+        final byte[] keyDigest = md5.digest(key.getEncoded());
+
+        Predicate<byte[]> notEqualsKeyHash = block -> !Arrays.equals(block, keyDigest);
+
+        List<byte[]> blocks = DataParser.splitIntoBlocks(data);
+
+        final byte[][] idk = new byte[1][];
+
+        List<byte[]> hiddenBlocks = blocks.stream()
+                .peek(b -> idk[0] = b)
+                .map(b -> decrypt(b, cipher))
+                .dropWhile(notEqualsKeyHash)
+                .skip(1)
+                .takeWhile(notEqualsKeyHash)
+                .collect(Collectors.toList());
+
+        System.out.println(blocks.indexOf(idk[0]));
+        Path outPath = Path.of(map.get("--output"));
+        if (Files.exists(outPath)) {
+            Files.delete(outPath);
+        }
+        for (byte[] bytes : hiddenBlocks) {
+            Files.write(outPath, bytes, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         }
 
-        int startIndex = -1;
-        int endIndex = -1;
-
-        for (byte[] block : blocks) {
-            byte[] decryptData = input.getCipher().doFinal(block);
-            byte[] key = input.getKey().getEncoded();
-
-            if (Arrays.equals(decryptData, key)) {
-                if (startIndex == -1) {
-                    startIndex = (blocks.indexOf(block) + 1) * 128;
-                } else {
-                    endIndex = (blocks.indexOf(block) - 1) * 128;
-                    break;
-                }
-            }
-        }
-        byte[] data = input.getCipher().doFinal(Arrays.copyOfRange(inData, startIndex, endIndex));
-        writeToFile(data);
     }
 
-    private static void writeToFile(byte[] data)
+    private static byte[] decrypt(byte[] bytes, Cipher c)
     {
         try {
-            Files.write(Path.of(input.getOutPath()), data);
-        } catch (IOException e) {
-            exitWithError("Could not write data to file");
+            return c.doFinal(bytes);
+        } catch (IllegalBlockSizeException | BadPaddingException e) {
+            throw new RuntimeException("Could not decrypt");
+        }
+    }
+
+    private static SecretKeySpec createSecretKey(String key)
+    {
+        byte[] keyBytes = DataParser.parseHexFromFile(key);
+        return new SecretKeySpec(keyBytes, "AES");
+    }
+
+    private static Cipher createCipher(String ctr, SecretKeySpec key)
+    {
+        Cipher cipher;
+        try {
+            if (ctr != null) {
+                byte[] ctrBytes = DataParser.parseHexFromFile(ctr);
+                IvParameterSpec spec = new IvParameterSpec(ctrBytes);
+
+                cipher = Cipher.getInstance("AES/CTR/NoPadding");
+                cipher.init(Cipher.DECRYPT_MODE, key, spec);
+            } else {
+                cipher = Cipher.getInstance("AES/ECB/NoPadding");
+                cipher.init(Cipher.DECRYPT_MODE, key);
+            }
+            return cipher;
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
+                 InvalidKeyException e) {
+            throw new RuntimeException("Failed to get cipher");
         }
     }
 
