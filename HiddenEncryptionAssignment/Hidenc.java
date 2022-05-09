@@ -1,14 +1,14 @@
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class Hidenc
 {
+    static SecureRandom prng;
 
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args)
     {
         Map<String, String> map = Helper.parseArgs(args);
 
@@ -16,35 +16,37 @@ public class Hidenc
         final Cipher cipher = Helper.createCipher(map.get("--ctr"), key, Cipher.ENCRYPT_MODE);
         final byte[] input = Helper.parseBytesFromFile(map.get("--input"));
         final byte[] keyDigest = Helper.digest(key.getEncoded());
+        
 
+        boolean ctr = map.get("--ctr") != null;
 
-        // Get template or size
-        String templateString = map.get("--template");
-        String sizeString = map.get("--size");
-        int size;
-        byte[] template;
-        if (Objects.equals(templateString, sizeString)) { // Both null
-            Helper.exitWithError("Only one of --template and --size can be specified.");
+        byte[] blob = createBlob(input, ctr);
+    }
+
+    private static int getOffset(String offsetString, int blobSize)
+    {
+        int max = 2000 - blobSize;
+        int rand = prng.nextInt(max);
+        while (rand % 16 != 0) {
+            rand = prng.nextInt(max);
         }
-        if (sizeString != null) {
-            size = Integer.parseInt(sizeString);
-        } else if (templateString != null) {
-            template = Helper.parseBytesFromFile(templateString);
-            size = template.length;
-        } else {
-            size = 2048;
-        }
-        final int finalSize = size;
+        return offsetString != null ? Integer.parseInt(offsetString) : rand;
+    }
 
-        // Set offset
-        String offsetString = map.get("--offset");
-        SecureRandom random = new SecureRandom();
-        int randomInt = random
-                .ints(100, 0, finalSize / 2)
-                .filter(i -> i % 16 == 0)
-                .findAny()
-                .orElse(0);
-        final int offset = offsetString != null ? Integer.parseInt(Helper.parseStringFromFile(offsetString)) : randomInt;
+    private static byte[] createBlob(final byte[] data, boolean ctr)
+    {
 
+
+        return null;
+    }
+
+    private static List<byte[]> createECB()
+    {
+        return null;
+    }
+
+    private static List<byte[]> createCTR()
+    {
+        return null;
     }
 }
