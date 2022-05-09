@@ -1,111 +1,93 @@
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Hiddec
 {
-    public static Cipher cipher;
+    static Predicate<byte[]> notEqualsKeyHash;
 
-    public static void main(String[] args) throws Exception
+    static Function<byte[], byte[]> decrypt;
+    static Function<byte[], byte[]> update;
+
+    public static void main(String[] args)
     {
-        Pattern pattern = Pattern.compile("--(\\w+)=");
-        Consumer<String> argCheck = arg -> {
-            if (!pattern.matcher(arg).find()) exitWithError("Incorrect input " + arg);
+        Map<String, String> map = Helper.parseArgs(args);
+
+        final SecretKeySpec key = Helper.createSecretKey(map.get("--key"));
+        final Cipher cipher = Helper.createCipher(map.get("--ctr"), key, Cipher.DECRYPT_MODE);
+        final byte[] input = Helper.parseBytesFromFile(map.get("--input"));
+        final byte[] keyDigest = Helper.digest(key.getEncoded());
+
+        update = cipher::update;
+        decrypt = block -> {
+            try {
+                return cipher.doFinal(block);
+            } catch (IllegalBlockSizeException | BadPaddingException e) {
+                throw new RuntimeException("Failed to decrypt block");
+            }
         };
+        notEqualsKeyHash = block -> !Arrays.equals(block, keyDigest);
 
-        Map<String, String> map = Arrays.stream(args)
-                .peek(argCheck)
-                .map(arg -> arg.split("="))
-                .collect(Collectors.toMap(x -> x[0], x -> x[1]));
+        boolean ctr = map.get("--ctr") != null;
 
-        final byte[] data = DataParser.parseBytesFromFile(map.get("--input"));
-        final SecretKeySpec key = createSecretKey(map.get("--key"));
-        final Cipher cipher = createCipher(map.get("--ctr"), key);
+        byte[] hiddenData = getHiddenData(input, ctr);
 
-        final MessageDigest md5 = MessageDigest.getInstance("MD5");
-        final byte[] keyDigest = md5.digest(key.getEncoded());
+        Helper.writeToFile(hiddenData, map.get("--output"));
+    }
 
-        Predicate<byte[]> notEqualsKeyHash = block -> !Arrays.equals(block, keyDigest);
+    private static byte[] getHiddenData(final byte[] data, boolean ctr)
+    {
+        // Split data into blocks aligned with AES-128.
+        List<byte[]> blocks = Helper.splitIntoBlocks(data);
 
-        List<byte[]> blocks = DataParser.splitIntoBlocks(data);
+        // Stores last found H(k).
+        final byte[][] Hk = new byte[1][];
 
-        final byte[][] idk = new byte[1][];
+        List<byte[]> hiddenBlocks = ctr ? getCTR(blocks, Hk) : getECB(blocks, Hk);
 
-        List<byte[]> hiddenBlocks = blocks.stream()
-                .peek(b -> idk[0] = b)
-                .map(b -> decrypt(b, cipher))
+        // Get H'.
+        int indexOfHprime = blocks.lastIndexOf(Hk[0]) + 1;
+        byte[] Hprime = decrypt.apply(blocks.get(indexOfHprime));
+
+        // Convert List<byte[]> to ByteBuffer and get the hash H(data).
+        ByteBuffer buf = ByteBuffer.allocate(hiddenBlocks.size() * 16);
+        hiddenBlocks.forEach(buf::put);
+        byte[] Hdata = Helper.digest(buf.array());
+
+        // If H(data) != H'(k)', unsuccessful.
+        if (!Arrays.equals(Hdata, Hprime)) {
+            Helper.exitWithError("Failed to verify data, H' != H(data)");
+        }
+        return buf.array();
+    }
+
+    private static List<byte[]> getECB(final List<byte[]> blocks, final byte[][] Hk)
+    {
+        return blocks.stream()
+                .peek(block -> Hk[0] = block)
+                .map(decrypt)
                 .dropWhile(notEqualsKeyHash)
                 .skip(1)
                 .takeWhile(notEqualsKeyHash)
                 .collect(Collectors.toList());
-
-        System.out.println(blocks.indexOf(idk[0]));
-        Path outPath = Path.of(map.get("--output"));
-        if (Files.exists(outPath)) {
-            Files.delete(outPath);
-        }
-        for (byte[] bytes : hiddenBlocks) {
-            Files.write(outPath, bytes, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-        }
-
     }
 
-    private static byte[] decrypt(byte[] bytes, Cipher c)
+    private static List<byte[]> getCTR(final List<byte[]> blocks, final byte[][] Hk)
     {
-        try {
-            return c.doFinal(bytes);
-        } catch (IllegalBlockSizeException | BadPaddingException e) {
-            throw new RuntimeException("Could not decrypt");
-        }
-    }
-
-    private static SecretKeySpec createSecretKey(String key)
-    {
-        byte[] keyBytes = DataParser.parseHexFromFile(key);
-        return new SecretKeySpec(keyBytes, "AES");
-    }
-
-    private static Cipher createCipher(String ctr, SecretKeySpec key)
-    {
-        Cipher cipher;
-        try {
-            if (ctr != null) {
-                byte[] ctrBytes = DataParser.parseHexFromFile(ctr);
-                IvParameterSpec spec = new IvParameterSpec(ctrBytes);
-
-                cipher = Cipher.getInstance("AES/CTR/NoPadding");
-                cipher.init(Cipher.DECRYPT_MODE, key, spec);
-            } else {
-                cipher = Cipher.getInstance("AES/ECB/NoPadding");
-                cipher.init(Cipher.DECRYPT_MODE, key);
-            }
-            return cipher;
-        } catch (NoSuchPaddingException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
-                 InvalidKeyException e) {
-            throw new RuntimeException("Failed to get cipher");
-        }
-    }
-
-    public static void exitWithError(String message)
-    {
-        System.out.printf("Error: %s.%nTerminated", message);
-        System.exit(1);
+        return blocks.stream()
+                .peek(block -> Hk[0] = block)
+                .dropWhile(block -> notEqualsKeyHash.test(decrypt.apply(block)))
+                .map(update)
+                .skip(1)
+                .takeWhile(notEqualsKeyHash)
+                .collect(Collectors.toList());
     }
 }
