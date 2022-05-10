@@ -82,7 +82,7 @@ public class Helper
         int size = bytes.length;
         List<byte[]> blocks = new ArrayList<>(size / 16);
 
-        for (int i = 0; i < size - 16; i += 16) {
+        for (int i = 0; i < size; i += 16) {
             blocks.add(Arrays.copyOfRange(bytes, i, i + 16));
         }
         return blocks;

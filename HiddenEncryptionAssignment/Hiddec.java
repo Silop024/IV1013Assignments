@@ -51,13 +51,14 @@ public class Hiddec
         // Stores last found H(k).
         final byte[][] Hk = new byte[1][];
 
+        // Get hidden blocks, either in ctr or ecb mode
         List<byte[]> hiddenBlocks = ctr ? getCTR(blocks, Hk) : getECB(blocks, Hk);
 
         // Get H'.
         int indexOfHprime = blocks.lastIndexOf(Hk[0]) + 1;
         byte[] Hprime = decrypt.apply(blocks.get(indexOfHprime));
 
-        // Convert List<byte[]> to ByteBuffer and get the hash H(data).
+        // Convert List<byte[]> to ByteBuffer and get the hash of the hidden data H(data).
         ByteBuffer buf = ByteBuffer.allocate(hiddenBlocks.size() * 16);
         hiddenBlocks.forEach(buf::put);
         byte[] Hdata = Helper.digest(buf.array());
@@ -79,7 +80,7 @@ public class Hiddec
                 .takeWhile(notEqualsKeyHash)
                 .collect(Collectors.toList());
     }
-
+    
     private static List<byte[]> getCTR(final List<byte[]> blocks, final byte[][] Hk)
     {
         return blocks.stream()
