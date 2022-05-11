@@ -1,21 +1,15 @@
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class Hiddec
 {
-    static Predicate<byte[]> notEqualsKeyHash;
-
-    static Function<byte[], byte[]> decrypt;
-    static Function<byte[], byte[]> update;
+    private static Predicate<byte[]> notEqualsKeyHash;
 
     public static void main(String[] args)
     {
@@ -23,17 +17,11 @@ public class Hiddec
 
         final SecretKeySpec key = Helper.createSecretKey(map.get("--key"));
         final Cipher cipher = Helper.createCipher(map.get("--ctr"), key, Cipher.DECRYPT_MODE);
-        final byte[] input = Helper.parseBytesFromFile(map.get("--input"));
-        final byte[] keyDigest = Helper.digest(key.getEncoded());
+        final byte[] input = Helper.readBytesFromFile(map.get("--input"));
+        final byte[] keyDigest = Helper.getDigest(key.getEncoded());
 
-        update = cipher::update;
-        decrypt = block -> {
-            try {
-                return cipher.doFinal(block);
-            } catch (IllegalBlockSizeException | BadPaddingException e) {
-                throw new RuntimeException("Failed to decrypt block");
-            }
-        };
+        Helper.initCiphers(cipher);
+
         notEqualsKeyHash = block -> !Arrays.equals(block, keyDigest);
 
         boolean ctr = map.get("--ctr") != null;
@@ -56,12 +44,12 @@ public class Hiddec
 
         // Get H'.
         int indexOfHprime = blocks.lastIndexOf(Hk[0]) + 1;
-        byte[] Hprime = decrypt.apply(blocks.get(indexOfHprime));
+        byte[] Hprime = Helper.doFinal.apply(blocks.get(indexOfHprime));
 
         // Convert List<byte[]> to ByteBuffer and get the hash of the hidden data H(data).
         ByteBuffer buf = ByteBuffer.allocate(hiddenBlocks.size() * 16);
         hiddenBlocks.forEach(buf::put);
-        byte[] Hdata = Helper.digest(buf.array());
+        byte[] Hdata = Helper.getDigest(buf.array());
 
         // If H(data) != H'(k)', unsuccessful.
         if (!Arrays.equals(Hdata, Hprime)) {
@@ -74,19 +62,19 @@ public class Hiddec
     {
         return blocks.stream()
                 .peek(block -> Hk[0] = block)
-                .map(decrypt)
+                .map(Helper.doFinal)
                 .dropWhile(notEqualsKeyHash)
                 .skip(1)
                 .takeWhile(notEqualsKeyHash)
                 .collect(Collectors.toList());
     }
-    
+
     private static List<byte[]> getCTR(final List<byte[]> blocks, final byte[][] Hk)
     {
         return blocks.stream()
                 .peek(block -> Hk[0] = block)
-                .dropWhile(block -> notEqualsKeyHash.test(decrypt.apply(block)))
-                .map(update)
+                .dropWhile(block -> notEqualsKeyHash.test(Helper.doFinal.apply(block)))
+                .map(Helper.update)
                 .skip(1)
                 .takeWhile(notEqualsKeyHash)
                 .collect(Collectors.toList());
