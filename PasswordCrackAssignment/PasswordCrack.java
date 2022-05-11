@@ -23,12 +23,38 @@ public class PasswordCrack
             exitWithError("Password list empty, no passwords to crack.", "Exiting...");
         }
         List<String> dictionary = getDictionary(args[0]);
+        dictionary = enhanceDictionary(dictionary);
 
-        dictionary.addAll(0, parseNames());
         List<String> hashes = parseHashes();
 
         Cracker cracker = new Cracker(dictionary, hashes);
         cracker.crack();
+    }
+
+    private static List<String> enhanceDictionary(List<String> dictionary)
+    {
+        addCommon(dictionary);
+        dictionary.addAll(0, parseNames());
+        return dictionary.stream().distinct().collect(Collectors.toList());
+    }
+
+    // https://en.wikipedia.org/wiki/List_of_the_most_common_passwords Top 20 according to Nordpass
+    // Removed passwords from the wiki list that would be achieved with 1 or 2 mangles of another.
+    private static void addCommon(List<String> dictionary)
+    {
+        dictionary.add(0, "123456");
+        dictionary.add(0, "123456789");
+        dictionary.add(0, "querty");
+        dictionary.add(0, "password");
+        dictionary.add(0, "111111");
+        dictionary.add(0, "123");
+        dictionary.add(0, "qwerty123");
+        dictionary.add(0, "000000");
+        dictionary.add(0, "1q2w3e");
+        dictionary.add(0, "aa12345678");
+        dictionary.add(0, "abc123");
+        dictionary.add(0, "qwertyuiop");
+        dictionary.add(0, "password123");
     }
 
     private static List<String[]> getUserList(String path)

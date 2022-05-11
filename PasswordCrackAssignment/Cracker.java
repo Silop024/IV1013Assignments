@@ -16,29 +16,8 @@ public class Cracker
 
     public void crack()
     {
-        // Old ugly solution
-        /*
-        // 1 mangle
-        dictionary.parallelStream().forEach(
-                x -> Mangle.getAllMangles(x).forEach(this::checkAllVictims)
-        );
-        // 2 mangles
-        dictionary.parallelStream().forEach(
-                x -> Mangle.getAllMangles(x).forEach(
-                        y -> Mangle.getAllMangles(y).forEach(this::checkAllVictims)
-                )
-        );
-        // 3 mangles
-        dictionary.parallelStream().forEach(
-                x -> Mangle.getAllMangles(x).forEach(
-                        y -> Mangle.getAllMangles(y).forEach(
-                                z -> Mangle.getAllMangles(z).forEach(this::checkAllVictims)
-                        )
-                )
-        );
-        */
-        // New recursive solution
         Mangler m = new Mangler(this);
+
         int i = 0;
         while (!hashes.isEmpty()) {
             int finalI = i++;

@@ -5,29 +5,11 @@ public class Mangle
     private static final char[] alphabet = "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final Locale locale = Locale.ROOT;
 
-    /*public static final Set<String> triedMangles = Collections.synchronizedSet(new HashSet<>(1000000));
-
-    public static List<String> getFinalMangles(String origin)
-    {
-        int length = origin.length();
-        if (length < 2) {
-            return new ArrayList<>();
-        }
-        Set<String> mangles = new HashSet<>(getAllMangles(origin));
-
-        synchronized (triedMangles) {
-            mangles.removeIf(triedMangles::contains);
-
-            triedMangles.addAll(mangles);
-        }
-        return new ArrayList<>(mangles);
-    }*/
-
     public static List<String> getAllMangles(String origin)
     {
         int length = origin.length();
         if (length < 2) {
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
         Set<String> mangles = new HashSet<>(64);
 
@@ -45,20 +27,22 @@ public class Mangle
             }
             mangles.add(prepend(origin, c));
         }
-        if (length < 12) {
+        if (length <= 8) {
             mangles.add(trim(origin, false));
         }
-        mangles.add(trim(origin, true));
+        if (length < 8) {
+            mangles.add(duplicate(origin));
+        }
 
-        mangles.add(duplicate(origin));
+        mangles.add(trim(origin, true));
 
         String reverse = reverse(origin);
         if (!reverse.equals(origin)) {
             mangles.add(reverse);
-            if (length < 12) {
+            if (length < 8) {
                 mangles.add(reflect(origin, false));
+                mangles.add(reflect(origin, true));
             }
-            mangles.add(reflect(origin, true));
         }
         mangles.remove(origin);
 
