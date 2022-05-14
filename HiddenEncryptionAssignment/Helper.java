@@ -94,7 +94,7 @@ public class Helper
         try {
             return Files.readAllBytes(Path.of(path));
         } catch (IOException e) {
-            throw new NoStackTraceRuntimeException("Failed to parse file " + path);
+            throw new NoStackTraceRuntimeException("Failed to read file " + path);
         }
     }
 
@@ -119,6 +119,7 @@ public class Helper
         }
     }
 
+    // https://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java
     public static byte[] stringToHex(String str) {
         int len = str.length();
         byte[] data = new byte[len / 2];
