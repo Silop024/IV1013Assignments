@@ -25,4 +25,8 @@ hs_err_pid*
 #Something
 *.txt
 .vscode/*
+
+# Default ignored files IntelliJ
+/shelf/
+/workspace.xml
 .idea/*
