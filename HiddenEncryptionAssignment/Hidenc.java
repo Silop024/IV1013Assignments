@@ -2,10 +2,9 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 public class Hidenc
 {
@@ -15,31 +14,28 @@ public class Hidenc
     {
         Map<String, String> map = Helper.parseArgs(args);
 
-        if(map.isEmpty()) {
-            Helper.exitWithError("No args given");
-        }
-
         final SecretKeySpec key = Helper.createSecretKey(map.get("--key"));
         final Cipher cipher = Helper.createCipher(map.get("--ctr"), key, Cipher.ENCRYPT_MODE);
         final byte[] input = Helper.readBytesFromFile(map.get("--input"));
         final byte[] keyDigest = Helper.getDigest(key.getEncoded());
-        final int offset = getOffset(map.get("--offset"), input.length + 48);
 
-        int size;
+        int size = 2048;
         byte[] template = null;
         if (map.containsKey("--size")) {
             size = getSize(map.get("--size"));
         } else if (map.containsKey("--template")) {
             template = getTemplate(map.get("--template"));
             size = template.length;
-        } else {
-            size = 2048;
         }
 
         Helper.initCiphers(cipher);
+        
+        byte[] blob = createBlob(input, keyDigest);
 
-        boolean ctr = map.get("--ctr") != null;
-        byte[] blob = createBlob(input, keyDigest, ctr);
+        final int offset = getOffset(map.get("--offset"), size - blob.length);
+
+        if (offset + blob.length > size) Helper.exitWithError("Can not put a blob past the end of the container");
+
         byte[] container = createContainer(blob, offset, size, template);
         Helper.writeToFile(container, map.get("--output"));
     }
@@ -57,43 +53,36 @@ public class Hidenc
         return container;
     }
 
-    private static byte[] createBlob(byte[] data, byte[] keyDigest, boolean ctr)
+    private static byte[] createBlob(byte[] data, byte[] keyDigest)
     {
-        // Create blob of encrypted data with H(k) at the beginning and H(k)/H(data) at the end.
-        List<byte[]> blob = new ArrayList<>();
-        blob.add(keyDigest);
-        blob.addAll(Helper.splitIntoBlocks(data));
-        blob.add(keyDigest);
-        blob.add(Helper.getDigest(data));
-        blob = ctr ? createCTR(blob) : createECB(blob);
-
-        ByteBuffer buf = ByteBuffer.allocate(blob.size() * 16);
-        blob.forEach(buf::put);
-        return buf.array();
+        // Create blob of encrypted data with H(k) at the beginning and H(k)+H(data) at the end.
+        ByteBuffer blobBuf = ByteBuffer.allocate(data.length + 48);
+        blobBuf.put(keyDigest);
+        blobBuf.put(data);
+        blobBuf.put(keyDigest);
+        blobBuf.put(Helper.getDigest(data));
+        return Helper.doFinal.apply(blobBuf.array());
     }
 
-    private static List<byte[]> createECB(List<byte[]> blob)
+    /** getOffset will parse the offsetString as an integer if not null
+     *  or return a pseudo-random integer.
+     * @param offsetString The input string given as argument --offset=
+     * @param maxOffset The maximum value of the offset
+     * @return The given offset or a pseudo-random number less than maxOffset and divisible by 16.
+     */
+    private static int getOffset(String offsetString, int maxOffset)
     {
-        return blob.stream()
-                .map(Helper.doFinal)
-                .collect(Collectors.toList());
-    }
-
-    private static List<byte[]> createCTR(List<byte[]> blob)
-    {
-        return blob.stream()
-                .map(Helper.update)
-                .collect(Collectors.toList());
-    }
-
-    private static int getOffset(String offsetString, int blobSize)
-    {
-        int max = 2048 - blobSize;
-        int rand = prng.nextInt(max);
-        while (rand % 16 != 0) {
-            rand = prng.nextInt(max);
+        if(offsetString != null) {
+            return Integer.parseInt(offsetString);
+        } else {
+            return prng.ints().dropWhile(num -> num % 16 != 0 || num > maxOffset).findAny().orElse(0);
         }
-        return offsetString != null ? Integer.parseInt(offsetString) : rand;
+
+        /*int rand = prng.nextInt(maxOffset);
+        while (rand % 16 != 0) {
+            rand = prng.nextInt(maxOffset);
+        }
+        return rand;*/
     }
 
     private static int getSize(String sizeString)

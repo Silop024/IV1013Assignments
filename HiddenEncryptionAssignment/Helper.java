@@ -25,7 +25,8 @@ public class Helper
     public static Function<byte[], byte[]> doFinal;
     public static Function<byte[], byte[]> update;
 
-    public static void initCiphers(Cipher cipher) {
+    public static void initCiphers(Cipher cipher)
+    {
         update = cipher::update;
         doFinal = block -> {
             try {
@@ -43,12 +44,12 @@ public class Helper
             if (!pattern.matcher(arg).find()) throw new NoStackTraceRuntimeException("Incorrect arg " + arg);
         };
 
-        Map<String, String> map =  Arrays.stream(in)
+        Map<String, String> map = Arrays.stream(in)
                 .peek(argCheck)
                 .map(arg -> arg.split("="))
                 .collect(Collectors.toMap(x -> x[0], x -> x[1]));
 
-        if(map.isEmpty()) {
+        if (map.isEmpty()) {
             throw new NoStackTraceRuntimeException("No args given");
         }
         return map;
@@ -69,7 +70,7 @@ public class Helper
     {
         try {
             return MessageDigest.getInstance("MD5").digest(data);
-        } catch (NoSuchAlgorithmException e) {
+        } catch (Exception e) {
             throw new NoStackTraceRuntimeException("Failed to get digest");
         }
     }
@@ -84,8 +85,8 @@ public class Helper
     {
         try {
             Files.write(Path.of(path), out);
-        } catch (IOException e) {
-            throw new NoStackTraceRuntimeException("Failed to write to file " + path);
+        } catch (Exception e) {
+            throw new NoStackTraceRuntimeException("Failed to write to file named " + path);
         }
     }
 
@@ -93,8 +94,8 @@ public class Helper
     {
         try {
             return Files.readAllBytes(Path.of(path));
-        } catch (IOException e) {
-            throw new NoStackTraceRuntimeException("Failed to read file " + path);
+        } catch (Exception e) {
+            throw new NoStackTraceRuntimeException("Failed to read file named " + path);
         }
     }
 
@@ -113,14 +114,14 @@ public class Helper
                 cipher.init(mode, key);
             }
             return cipher;
-        } catch (NoSuchPaddingException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
-                 InvalidKeyException e) {
+        } catch (Exception e) {
             throw new NoStackTraceRuntimeException("Failed to get cipher");
         }
     }
 
     // https://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java
-    public static byte[] stringToHex(String str) {
+    public static byte[] stringToHex(String str)
+    {
         int len = str.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
@@ -135,7 +136,8 @@ public class Helper
         throw new NoStackTraceRuntimeException(message);
     }
 
-    public static class NoStackTraceRuntimeException extends RuntimeException {
+    private static class NoStackTraceRuntimeException extends RuntimeException
+    {
 
         public NoStackTraceRuntimeException(String s)
         {
@@ -143,7 +145,8 @@ public class Helper
         }
 
         @Override
-        public synchronized Throwable fillInStackTrace() {
+        public synchronized Throwable fillInStackTrace()
+        {
             return this;
         }
     }
