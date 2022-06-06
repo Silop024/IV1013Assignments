@@ -1,2 +1,1 @@
-# StreamCipherAssignment
- 
+# IV1013 Project Assignments
