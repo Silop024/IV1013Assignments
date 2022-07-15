@@ -1,6 +1,6 @@
 import java.util.*;
 
-public class Mangle
+public class MangleMaker
 {
     private static final char[] alphabet = "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final Locale locale = Locale.ROOT;

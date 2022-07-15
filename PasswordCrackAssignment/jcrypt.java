@@ -1,6 +1,16 @@
-public class jcrypt
+/****************************************************************************
+ * jcrypt.java
+ *
+ * Java-based implementation of the unix crypt command
+ *
+ * Based upon C source code written by Eric Young, eay@psych.uq.oz.au
+ *
+ * Downloaded from http://www.vulcanware.com/java_jcrypt/jcrypt.java
+ *
+ ****************************************************************************/
+public class JCrypt
 {
-    private jcrypt()
+    private JCrypt()
     {
     }
 
@@ -593,20 +603,5 @@ public class jcrypt
             }
         }
         return (buffer.toString());
-    }
-
-    public static void main(String[] args)
-    {
-        if (args.length != 2) {
-            System.out.println("Usage: jcrypt saltValue password");
-        } else {
-            String salt = args[0];
-            String password = args[1];
-
-            System.out.println(
-                    "Salt: [" + salt + "], Password: [" + password + "] => [" +
-                            jcrypt.crypt(salt, password) + "]"
-            );
-        }
     }
 }

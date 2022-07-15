@@ -3,12 +3,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class Cracker
+public class PasswordCracker
 {
     private final List<String> dictionary;
     private final List<String> hashes;
 
-    public Cracker(List<String> dictionary, List<String> hashes)
+    public PasswordCracker(List<String> dictionary, List<String> hashes)
     {
         this.dictionary = dictionary;
         this.hashes = new CopyOnWriteArrayList<>(hashes);
@@ -16,12 +16,12 @@ public class Cracker
 
     public void crack()
     {
-        Mangler m = new Mangler(this);
+        MangleChecker checker = new MangleChecker(this);
 
         int i = 0;
         while (!hashes.isEmpty()) {
             int finalI = i++;
-            dictionary.parallelStream().forEach(word -> m.start(word, finalI));
+            dictionary.parallelStream().forEach(word -> checker.checkMangles(word, finalI));
             removeFoundUserNames();
         }
     }
@@ -41,7 +41,7 @@ public class Cracker
 
     private boolean hashCompare(String word, String hash)
     {
-        if (hash.equals(jcrypt.crypt(hash.substring(0, 2), word))) {
+        if (hash.equals(JCrypt.crypt(hash.substring(0, 2), word))) {
             System.out.println(word);
             return true;
         }
@@ -56,7 +56,7 @@ public class Cracker
     public void removeFoundUserNames()
     {
         Set<String> dictSet = new HashSet<>(dictionary);
-        for (String[] user : PasswordCrack.userList) {
+        for (String[] user : Main.userList) {
             List<String> fullName = List.of(user[2].split(" "));
             String account = user[0];
             String hash = user[1];

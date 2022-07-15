@@ -8,9 +8,27 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class PasswordCrack
+public class Main
 {
     public static final List<String[]> userList = new ArrayList<>(20);
+
+    // https://en.wikipedia.org/wiki/List_of_the_most_common_passwords Top 20 according to Nordpass
+    // Removed passwords from the wiki list that would be achieved with 1 or 2 mangles of another.
+    private static final String[] commonPasswords = {
+            "123456",
+            "123456789",
+            "querty",
+            "password",
+            "111111",
+            "123",
+            "qwerty123",
+            "000000",
+            "1q2w3e",
+            "aa12345678",
+            "abc123",
+            "qwertyuiop",
+            "password123"
+    };
 
     public static void main(String[] args)
     {
@@ -23,38 +41,18 @@ public class PasswordCrack
             exitWithError("Password list empty, no passwords to crack.", "Exiting...");
         }
         List<String> dictionary = getDictionary(args[0]);
-        dictionary = enhanceDictionary(dictionary);
+        dictionary = getEnhancedDictionary(dictionary);
 
         List<String> hashes = parseHashes();
 
-        Cracker cracker = new Cracker(dictionary, hashes);
-        cracker.crack();
+        new PasswordCracker(dictionary, hashes).crack();
     }
 
-    private static List<String> enhanceDictionary(List<String> dictionary)
+    private static List<String> getEnhancedDictionary(List<String> dictionary)
     {
-        addCommon(dictionary);
+        dictionary.addAll(0, List.of(commonPasswords));
         dictionary.addAll(0, parseNames());
         return dictionary.stream().distinct().collect(Collectors.toList());
-    }
-
-    // https://en.wikipedia.org/wiki/List_of_the_most_common_passwords Top 20 according to Nordpass
-    // Removed passwords from the wiki list that would be achieved with 1 or 2 mangles of another.
-    private static void addCommon(List<String> dictionary)
-    {
-        dictionary.add(0, "123456");
-        dictionary.add(0, "123456789");
-        dictionary.add(0, "querty");
-        dictionary.add(0, "password");
-        dictionary.add(0, "111111");
-        dictionary.add(0, "123");
-        dictionary.add(0, "qwerty123");
-        dictionary.add(0, "000000");
-        dictionary.add(0, "1q2w3e");
-        dictionary.add(0, "aa12345678");
-        dictionary.add(0, "abc123");
-        dictionary.add(0, "qwertyuiop");
-        dictionary.add(0, "password123");
     }
 
     private static List<String[]> getUserList(String path)
@@ -88,13 +86,13 @@ public class PasswordCrack
 
     private static List<String> parseHashes()
     {
-        return PasswordCrack.userList.stream().map(x -> x[1]).collect(Collectors.toList());
+        return Main.userList.stream().map(x -> x[1]).collect(Collectors.toList());
     }
 
     private static List<String> parseNames()
     {
         List<String> userNames = new ArrayList<>(20 * 4);
-        for (String[] strings : PasswordCrack.userList) {
+        for (String[] strings : Main.userList) {
             List<String> names = Arrays.stream(strings[2].split(" "))
                     .filter(y -> !y.contains("."))
                     .collect(Collectors.toList());
@@ -105,15 +103,10 @@ public class PasswordCrack
         return userNames;
     }
 
-    private static void exitWithError(String errorMsg)
-    {
-        System.out.println(errorMsg);
-        System.exit(1);
-    }
-
     private static void exitWithError(String errorMsg1, String errorMsg2)
     {
         System.out.println(errorMsg1);
-        exitWithError(errorMsg2);
+        System.out.println(errorMsg2);
+        System.exit(1);
     }
 }
